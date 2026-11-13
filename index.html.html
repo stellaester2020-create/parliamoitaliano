@@ -1,0 +1,1816 @@
+<!DOCTYPE html>
+<!-- saved from url=(0259)https://164320864-atari-embeds.googleusercontent.com/embeds/6b07ff58ef6c9af0cc04f606a89001fe/inner-frame-minified.html?jsh=m%3B%2F_%2Fscs%2Fabc-static%2F_%2Fjs%2Fk%3Dgapi.lb.ru.ugidtXzoa70.O%2Fd%3D1%2Frs%3DAHpOoo_i-BJ1j_21jC_eCMo7zBFsydVtkg%2Fm%3D__features__ -->
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+  <style>body,html,iframe{margin:0;padding:0;height:100%;width:100%;overflow:hidden}.forceIosScrolling{overflow:scroll;-webkit-overflow-scrolling:touch}</style>
+<script src="./cb=gapi.loaded_0" async=""></script><script src="./api.js.&#1079;&#1072;&#1075;&#1088;&#1091;&#1079;&#1082;&#1072;" gapi_processed="true"></script></head>
+
+<body>
+<iframe id="userHtmlFrame" frameborder="0" scrolling="yes" style="overflow: auto;" src="./saved_resource.html">
+</iframe>
+
+<script>
+  const MessageAction = {
+    BACKGROUND_COLOR: 'ATARI_CODE_EMBED_BACKGROUND_COLOR',
+    GENAI_TEXT_EDIT: 'ATARI_GENAI_TEXT_EDIT',
+    GENAI_TEXT_FORMAT: 'ATARI_GENAI_TEXT_FORMAT',
+    IMAGE_CLICK: 'ATARI_CODE_EMBED_IMAGE_CLICK',
+    OPTIMISTIC_IMAGE_PREVIEW: 'ATARI_CODE_EMBED_OPTIMISTIC_IMAGE_PREVIEW',
+    IMAGE_ROLLBACK: 'ATARI_CODE_EMBED_IMAGE_ROLLBACK',
+    JS_CRASH: 'onJsCrash',
+    OBJECT_SEGMENTATION_EDITS: 'ATARI_OBJECT_SEGMENTATION_EDITS',
+    REDO: 'ATARI_CODE_EMBED_REDO',
+    RESIZE: 'ATARI_CODE_EMBED_RESIZE',
+    UNDO: 'ATARI_CODE_EMBED_UNDO'
+  };
+
+  const LIQUID_APP_CSP_META =
+      '<meta http-equiv="Content-Security-Policy" content="' +
+      "default-src 'none'; " +
+      "connect-src 'none'; " +
+      "form-action 'none'; " +
+      "object-src 'none'; " +
+      "frame-src 'none'; " +
+      'img-src data: blob: https://www.gstatic.com; ' +
+      "script-src 'self' " + window.location.origin +
+      " 'unsafe-inline' https://www.gstatic.com; " +
+      "style-src 'self' " + window.location.origin +
+      " 'unsafe-inline' https://www.gstatic.com " +
+      'https://fonts.googleapis.com; ' +
+      'font-src data: https://fonts.gstatic.com https://www.gstatic.com">';
+
+  // Skips comments/rawtext and quoted attribute values, which may contain '>'.
+  const HTML_CONTEXT_OR_META_RE = new RegExp(
+      '<\\!--(?:>|->|[\\s\\S]*?(?:--!?\\x3e|$))|' +
+      '<(script|style|textarea|title|xmp|iframe|noembed|noframes)\\b' +
+      '(?:[^>"\'\\/]|"[^"]*"|\'[^\']*\'|\\/(?!>))*>' +
+      '[\\s\\S]*?(?:<\\/\\1\\s*>|$)|' +
+      '(<meta\\b(?:=?[^>"\'=\\/\\s]+(?:\\s*=\\s*' +
+      '(?:"[^"]*"|\'[^\']*\'|[^>\\s]*))?|\\/+|[^>\\/])*>)|' +
+      '<[a-zA-Z][a-zA-Z0-9:-]*(?:\\s+[^>"\'=\\/\\s]+' +
+      '(?:\\s*=\\s*(?:"[^"]*"|\'[^\']*\'|[^>\\s]*))?)*[\\s\\/]*>',
+      'gi');
+  const META_REFRESH_ATTR_RE = new RegExp(
+      '\\bhttp-equiv\\s*=\\s*' +
+      '(?:"\\s*refresh\\s*"|\'\\s*refresh\\s*\'|refresh(?:\\s|>|\\/|$))',
+      'i');
+
+  function isRefreshMetaElement(el) {
+    if (!el || !el.getAttribute) return false;
+    var httpEquiv = el.getAttribute('http-equiv');
+    return !!httpEquiv && httpEquiv.trim().toLowerCase() === 'refresh';
+  }
+
+  function hasRefreshMeta(doc) {
+    if (!doc || !doc.querySelectorAll) return false;
+    var metas = doc.querySelectorAll('meta[http-equiv]');
+    for (var i = 0; i < metas.length; i++) {
+      if (isRefreshMetaElement(metas[i])) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  function stripMetaRefreshFromDom(doc) {
+    if (!doc || !doc.querySelectorAll) return;
+    var metas = doc.querySelectorAll('meta[http-equiv]');
+    for (var i = 0; i < metas.length; i++) {
+      if (isRefreshMetaElement(metas[i])) {
+        metas[i].remove();
+      }
+    }
+  }
+
+  function stripMetaRefresh(html) {
+    if (!html) return html;
+    var prev;
+    do {
+      prev = html;
+      html = html.replace(
+          HTML_CONTEXT_OR_META_RE, function(match, rawTag, metaTag) {
+            if (!metaTag) {
+              return match;
+            }
+            if (META_REFRESH_ATTR_RE.test(match)) {
+              return '';
+            }
+            try {
+              var doc = new DOMParser().parseFromString(
+                  policy ? policy.createHTML(match) : match, 'text/html');
+              if (hasRefreshMeta(doc)) {
+                return '';
+              }
+            } catch (e) {}
+            return match;
+          });
+    } while (html !== prev);
+    try {
+      for (var pass = 0; pass < 3; pass++) {
+        var fullDoc = new DOMParser().parseFromString(
+            policy ? policy.createHTML(html) : html, 'text/html');
+        if (!hasRefreshMeta(fullDoc)) {
+          break;
+        }
+        var nextHtml = html.replace(/<meta\b/gi, '');
+        if (nextHtml === html) {
+          break;
+        }
+        html = nextHtml;
+      }
+    } catch (e) {}
+    return html;
+  }
+
+  let enableErrorReporting = false;
+  // Whether to keep this frame from navigating away, which Liquid Apps could
+  // use to send data to other sites. Kept sticky once enabled.
+  let blockNavigations = false;
+
+  function handleError(event) {
+    if (enableErrorReporting && window.parent && window.parent.postMessage) {
+      if (event instanceof ErrorEvent || event.message) {
+        window.parent.postMessage({
+          type: MessageAction.JS_CRASH,
+          message: event.message || 'Unknown JS Error',
+          stack: event.error ? event.error.stack : undefined
+        }, '*');
+      } else if (event.target && (event.target.src || event.target.href)) {
+        var failedElement = event.target;
+        var resourceUrl = failedElement.src || failedElement.href;
+        var tagName = failedElement.tagName ? failedElement.tagName.toLowerCase() : 'element';
+        // Suppress placeholder and canvas image load failures from triggering
+        // crash reporting so that unresolved or loading images do not crash the embed.
+        if (tagName === 'img' && (resourceUrl.startsWith('canvas:') || failedElement.hasAttribute('data-ph'))) {
+          return;
+        }
+        window.parent.postMessage({
+          type: MessageAction.JS_CRASH,
+          message: 'Resource load failed for <' + tagName + '>: ' + resourceUrl,
+          stack: undefined
+        }, '*');
+      }
+    }
+  }
+
+  function handleUnhandledRejection(event) {
+    if (enableErrorReporting && window.parent && window.parent.postMessage) {
+      window.parent.postMessage({
+        type: MessageAction.JS_CRASH,
+        message: event.reason ? event.reason.message || String(event.reason) : 'Unhandled Promise Rejection',
+        stack: event.reason ? event.reason.stack : undefined
+      }, '*');
+    }
+  }
+
+  // The app's frame gets the same listeners in updateUserHtmlFrame.
+  window.addEventListener('error', handleError, true);
+  window.addEventListener('unhandledrejection', handleUnhandledRejection);
+  const origInnerPreventDefault = Event.prototype.preventDefault;
+  const origInnerIframeWinDesc = typeof HTMLIFrameElement !== 'undefined' &&
+      Object.getOwnPropertyDescriptor(
+          HTMLIFrameElement.prototype, 'contentWindow');
+  const origInnerIframeDocDesc = typeof HTMLIFrameElement !== 'undefined' &&
+      Object.getOwnPropertyDescriptor(
+          HTMLIFrameElement.prototype, 'contentDocument');
+  let innerFrameLockedDown = false;
+  if (window.navigation && window.navigation.addEventListener) {
+    window.navigation.addEventListener('navigate', function(e) {
+      if (blockNavigations && e.cancelable && !e.destination.sameDocument) {
+        origInnerPreventDefault.call(e);
+      }
+    }, true);
+  }
+  function lockDownInnerFrameForLiquidApp() {
+    if (innerFrameLockedDown) return;
+    innerFrameLockedDown = true;
+    try {
+      Object.defineProperty(window, 'open', {
+        value: function() {
+          return null;
+        },
+        writable: false,
+        configurable: false
+      });
+    } catch (err) {
+      window.open = function() {
+        return null;
+      };
+    }
+    try {
+      Object.defineProperty(HTMLElement.prototype, 'click', {
+        value: function() {},
+        writable: false,
+        configurable: false
+      });
+    } catch (err) {
+      HTMLElement.prototype.click = function() {};
+    }
+    if (origInnerIframeWinDesc && origInnerIframeWinDesc.get) {
+      try {
+        Object.defineProperty(HTMLIFrameElement.prototype, 'contentWindow', {
+          get: function() {
+            if (this === document.getElementById('userHtmlFrame')) {
+              return origInnerIframeWinDesc.get.call(this);
+            }
+            return null;
+          },
+          configurable: false,
+          enumerable: true
+        });
+      } catch (err) {}
+    }
+    if (origInnerIframeDocDesc && origInnerIframeDocDesc.get) {
+      try {
+        Object.defineProperty(HTMLIFrameElement.prototype, 'contentDocument', {
+          get: function() {
+            if (this === document.getElementById('userHtmlFrame')) {
+              return origInnerIframeDocDesc.get.call(this);
+            }
+            return null;
+          },
+          configurable: false,
+          enumerable: true
+        });
+      } catch (err) {}
+    }
+  }
+  document.addEventListener('click', function(e) {
+    if (blockNavigations) {
+      origInnerPreventDefault.call(e);
+    }
+  }, true);
+  let policy;
+  if (window.trustedTypes && window.trustedTypes.createPolicy) {
+    policy = window.trustedTypes.createPolicy('atari-gapi-loader', {
+      createScriptURL: (url) => {
+        if (url === 'https://apis.google.com/js/api.js?checkCookie=1') {
+          return url;
+        }
+        throw new Error('Attempted to load unexpected script URL');
+      },
+      createHTML: (html) => html
+    });
+  }
+
+  function loadGapi() {
+    var loaderScript = document.createElement('script');
+    var url = 'https://apis.google.com/js/api.js?checkCookie=1';
+    if (policy) {
+      loaderScript.src = policy.createScriptURL(url);
+    } else {
+      loaderScript.setAttribute('src', url);
+    }
+    loaderScript.onload = function() {
+      this.onload = function() {};
+      loadGapiClient();
+    };
+    loaderScript.onreadystatechange = function() {
+      if (this.readyState === 'complete') {
+        this.onload();
+      }
+    };
+    (document.head || document.body || document.documentElement).appendChild(loaderScript);
+  }
+
+  var activePreviews = new Map();
+
+  function clearActivePreviews() {
+    activePreviews.forEach(function(entry) {
+      if (entry.blobUrl) {
+        URL.revokeObjectURL(entry.blobUrl);
+      }
+      if (entry.elements) {
+        for (var i = 0; i < entry.elements.length; i++) {
+          delete entry.elements[i].__atariOriginalSrc;
+        }
+      }
+    });
+    activePreviews.clear();
+  }
+
+  function updateUserHtmlFrame(userHtml, enableInteraction, forceIosScrolling, enableHtmlSitesGenAi, isLiquidArtifact, inEditor, enableLiquidAppsVerticalScrolling = false, isFullPageEmbed = false, isInteractiveFullPageEmbed = false, textEditLabels = null, enableLiquidAppsObjectSegmentation = false, enableLiquidAppsEmbeddedPix = false) {
+    if (blockNavigations) {
+      isLiquidArtifact = true;
+    }
+    const enableHeightSync = !!enableLiquidAppsVerticalScrolling && (!!isLiquidArtifact || !!isInteractiveFullPageEmbed);
+    enableErrorReporting = !!isLiquidArtifact;
+    blockNavigations = blockNavigations || !!isLiquidArtifact;
+    const enableInlineTextEdit = !!(enableHtmlSitesGenAi && (isLiquidArtifact || isInteractiveFullPageEmbed) && inEditor);
+    const enableObjectSegmentation = enableInlineTextEdit && !!enableLiquidAppsObjectSegmentation;
+    const enableEmbeddedPix = !!(enableLiquidAppsEmbeddedPix && inEditor);
+    const sanitizedUserHtml =
+        isLiquidArtifact ? stripMetaRefresh(userHtml) : userHtml;
+    if (isLiquidArtifact) {
+      lockDownInnerFrameForLiquidApp();
+    }
+    if (enableInlineTextEdit) {
+      window.__atariSourcePayloadDom = new DOMParser().parseFromString(
+          policy ? policy.createHTML(sanitizedUserHtml) : sanitizedUserHtml,
+          'text/html');
+      if (isLiquidArtifact) {
+        stripMetaRefreshFromDom(window.__atariSourcePayloadDom);
+      }
+    }
+    let appHtml = sanitizedUserHtml;
+    if (enableObjectSegmentation) {
+      markSelectableElements(window.__atariSourcePayloadDom);
+      appHtml = window.__atariSourcePayloadDom.documentElement.outerHTML;
+    }
+    var frame = document.getElementById('userHtmlFrame');
+    if (enableInteraction) {
+      if (enableHeightSync) {
+        // The frame grows to fit its content, so only horizontal overflow can
+        // scroll. This must take precedence over forceIosScrolling: on iOS a
+        // scrollable frame captures touch scrolls even when it has nothing to
+        // scroll, which stops the page around the embed from scrolling.
+        frame.style.overflowX = 'auto';
+        frame.style.overflowY = 'hidden';
+        frame.setAttribute('scrolling', 'no');
+      } else if (forceIosScrolling) {
+        var iframeParent = frame.parentElement;
+        iframeParent.classList.add('forceIosScrolling');
+      } else {
+        frame.style.overflow = 'auto';
+      }
+    } else {
+      // TODO(tianm): Figure out a better way to do this, esp if the scrolling attribute stops being
+      // supported in browsers. Even though the scrolling attribute is deprecated, we need it for
+      // the innermost frame because we can't set "overflow:hidden" on its body and html without
+      // manually inserting a style tag into the frame, which we want to avoid (because it could
+      // interfere/conflict with the user code).
+      frame.setAttribute('scrolling', 'no');
+      frame.style.pointerEvents = 'none';
+    }
+    clearCookies();
+    clearStorage();
+    const oldSegmentation = frame.contentWindow.__atariObjectSegmentation;
+    if (oldSegmentation) {
+      oldSegmentation.destroy();
+      frame.contentWindow.__atariObjectSegmentation = null;
+    }
+    const oldImageToolbar = frame.contentWindow.__atariImageToolbar;
+    if (oldImageToolbar) {
+      oldImageToolbar.destroy();
+      frame.contentWindow.__atariImageToolbar = null;
+    }
+    clearActivePreviews();
+    frame.contentWindow.document.open();
+    // The app runs in its own frame, so its errors don't reach the listeners
+    // on this frame. document.open() removes all listeners from the app's
+    // frame, so they are added after it.
+    if (enableErrorReporting) {
+      frame.contentWindow.addEventListener('error', handleError, true);
+      frame.contentWindow.addEventListener('unhandledrejection', handleUnhandledRejection);
+    }
+    const hoverClass = 'atari-ai-hover-' + Math.random().toString(36).substring(2, 9);
+    const selectedClass = 'atari-ai-selected-' + Math.random().toString(36).substring(2, 9);
+    const bootstrapStyle = isLiquidArtifact ? '<link rel="stylesheet" href="bootstrap.min.css">' : '';
+    const prosemirrorBundle = (enableInlineTextEdit || enableEmbeddedPix) ? '<script src="prosemirror_bundle.js"><\/script>' : '';
+
+    const scrollRevealShim = enableHeightSync ? `
+      <style>
+        .reveal-node, .reveal, .fade-in, [data-reveal] {
+          opacity: 1 !important;
+          transform: none !important;
+          visibility: visible !important;
+        }
+      </style>
+      <script>
+        (function() {
+          if (typeof IntersectionObserver !== 'undefined') {
+            var OrigObserver = window.IntersectionObserver;
+            window.IntersectionObserver = function(callback, options) {
+              return new OrigObserver(function(entries, observer) {
+                var modifiedEntries = entries.map(function(entry) {
+                  if (!entry.isIntersecting) {
+                    try {
+                      return new Proxy(entry, {
+                        get: function(target, prop) {
+                          if (prop === 'isIntersecting') return true;
+                          if (prop === 'intersectionRatio') return 1;
+                          return target[prop];
+                        }
+                      });
+                    } catch (e) {}
+                  }
+                  return entry;
+                });
+                callback(modifiedEntries, observer);
+              }, options);
+            };
+            window.IntersectionObserver.prototype = OrigObserver.prototype;
+          }
+        })();
+      <\/script>
+    ` : '';
+
+    const textEditorPayload = enableInlineTextEdit ? `
+      <style>
+        .${hoverClass} {
+          cursor: pointer !important;
+        }
+        .${selectedClass} {
+          cursor: text !important;
+        }
+      </style>
+      <script>
+        (function() {
+          if (window.ProseMirror && window.ProseMirror.PROSEMIRROR_EDITOR_CSS) {
+            var editorStyle = document.createElement('style');
+            editorStyle.textContent = window.ProseMirror.PROSEMIRROR_EDITOR_CSS;
+            document.currentScript.before(editorStyle);
+          }
+          var waitForProsemirrorToInitialize = function() {
+            if (window.ProseMirror && window.ProseMirror.initLiquidAppsTextEditor) {
+              var labels = ${JSON.stringify(textEditLabels).replace(/</g, '\\u003c')};
+              window.ProseMirror.initLiquidAppsTextEditor({
+                hoverClass: '${hoverClass}',
+                selectedClass: '${selectedClass}',
+                postMessageType: '${MessageAction.GENAI_TEXT_EDIT}',
+                labels: labels
+              });
+              ${enableObjectSegmentation ? `
+              if (window.__atariObjectSegmentation) {
+                window.__atariObjectSegmentation.destroy();
+              }
+              window.__atariObjectSegmentation =
+                  window.ProseMirror.initObjectSegmentation({
+                    postMessageType: '${MessageAction.OBJECT_SEGMENTATION_EDITS}',
+                    labels: labels
+                  });
+              ` : ''}
+            } else {
+              setTimeout(waitForProsemirrorToInitialize, 10);
+            }
+          };
+
+          if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', waitForProsemirrorToInitialize);
+          } else {
+            waitForProsemirrorToInitialize();
+          }
+        })();
+      <\/script>
+    ` : '';
+    // In-page hash link interceptor:
+    // In code embeds, <base target="_blank"> is injected so external links open
+    // in a new tab. However, this causes in-page anchor links (<a href="#...">)
+    // to also default to target="_blank", opening the sandboxed harness
+    // (inner-frame-minified.html#...) in a blank new tab.
+    //
+    // This script intercepts clicks in the capturing phase (useCapture: true)
+    // before the browser triggers default navigation, preventing the new tab
+    // and scrolling smoothly to the target element within the iframe.
+    const hashLinkInterceptor = `
+      <script>
+        (function() {
+          if (window.__atariInitRender) {
+            window.__atariInitRender(${!!isLiquidArtifact});
+            return;
+          }
+          var isLiquid = false;
+          var guardsInstalled = false;
+          var LOCAL_DOWNLOAD_URL_RE = /^(?:blob|data):/i;
+          var PROTOCOL_RELATIVE_RE = /^[\\/\\\\]{2}/;
+          var FORBIDDEN_TAG_RE = /^(?:iframe|frame|object|embed)$/i;
+          var XLINK_NS = 'http://www.w3.org/1999/xlink';
+          var origPreventDefault = Event.prototype.preventDefault;
+          var origStopPropagation = Event.prototype.stopPropagation;
+          var origStopImmediatePropagation =
+              Event.prototype.stopImmediatePropagation;
+          var origAddEventListener = EventTarget.prototype.addEventListener;
+          var origRemoveEventListener =
+              EventTarget.prototype.removeEventListener;
+          var origWindowStop = window.stop ? window.stop.bind(window) : null;
+          var origElementRemove = Element.prototype.remove;
+          var origGetAttribute = Element.prototype.getAttribute;
+          var origGetAttributeNS = Element.prototype.getAttributeNS;
+          var origHasAttribute = Element.prototype.hasAttribute;
+          var origHasAttributeNS = Element.prototype.hasAttributeNS;
+          var origSetAttribute = Element.prototype.setAttribute;
+          var origSetAttributeNS = Element.prototype.setAttributeNS;
+          var origSetAttributeNode = Element.prototype.setAttributeNode;
+          var origSetAttributeNodeNS = Element.prototype.setAttributeNodeNS;
+          var origRemoveAttribute = Element.prototype.removeAttribute;
+          var origRemoveAttributeNS = Element.prototype.removeAttributeNS;
+          var origComposedPath = Event.prototype.composedPath;
+          var origCreateElement = Document.prototype.createElement;
+          var origCreateElementNS = Document.prototype.createElementNS;
+          var validatingEvents =
+              typeof WeakSet !== 'undefined' ? new WeakSet() : null;
+          var activeDeferredListeners = null;
+          var inProgrammaticClick = 0;
+
+          function isLinkElement(el) {
+            var tag = el && el.tagName && el.tagName.toLowerCase();
+            return tag === 'a' || tag === 'area';
+          }
+
+          function hasLinkHref(link) {
+            return origHasAttribute.call(link, 'href') ||
+                origHasAttributeNS.call(link, XLINK_NS, 'href');
+          }
+
+          // Returns the href of an HTML or SVG link, which may only have the
+          // legacy xlink:href attribute.
+          function getLinkHref(link) {
+            return origGetAttribute.call(link, 'href') ||
+                origGetAttributeNS.call(link, XLINK_NS, 'href');
+          }
+
+          function removeLinkHref(link) {
+            origRemoveAttribute.call(link, 'href');
+            origRemoveAttributeNS.call(link, XLINK_NS, 'href');
+          }
+
+          // Returns whether the link downloads a file that the app created,
+          // which doesn't send data to other sites.
+          function isLocalDownloadLink(link, href) {
+            return origHasAttribute.call(link, 'download') &&
+                LOCAL_DOWNLOAD_URL_RE.test(href);
+          }
+
+          function isRefreshValue(val) {
+            return String(val || '').trim().toLowerCase() === 'refresh';
+          }
+
+          function purgeMetaRefresh(root) {
+            if (!root || !root.querySelectorAll) return;
+            var metas = root.querySelectorAll('meta[http-equiv]');
+            for (var i = 0; i < metas.length; i++) {
+              if (isRefreshValue(
+                  origGetAttribute.call(metas[i], 'http-equiv'))) {
+                origElementRemove.call(metas[i]);
+              }
+            }
+            var frames = root.querySelectorAll('iframe, frame, object, embed');
+            for (var j = 0; j < frames.length; j++) {
+              origElementRemove.call(frames[j]);
+            }
+          }
+
+          function getParentOrHost(node) {
+            if (!node) return null;
+            if (node.parentElement) return node.parentElement;
+            var parent = node.parentNode;
+            return parent && parent.host ? parent.host : null;
+          }
+
+          function findLinkFromNode(startNode, requireHref) {
+            var el = startNode;
+            while (el && el !== document) {
+              if (isLinkElement(el) && (!requireHref || hasLinkHref(el))) {
+                return el;
+              }
+              el = getParentOrHost(el);
+            }
+            return null;
+          }
+
+          function findLinkFromEvent(e) {
+            if (origComposedPath) {
+              try {
+                var path = origComposedPath.call(e);
+                for (var i = 0; i < path.length; i++) {
+                  var node = path[i];
+                  if (isLinkElement(node) && hasLinkHref(node)) {
+                    return node;
+                  }
+                }
+              } catch (err) {}
+            }
+            return findLinkFromNode(e.target, true);
+          }
+
+          // Keeps the app from opening popups, navigating its frame, and
+          // adding meta refresh tags. document.open() keeps the window, its
+          // prototypes, and the document, so these are installed once per
+          // frame rather than on every render.
+          function installNavigationGuards() {
+            try {
+              Object.defineProperty(window, 'open', {
+                value: function() {
+                  return null;
+                },
+                writable: false,
+                configurable: false
+              });
+            } catch (err) {
+              window.open = function() {
+                return null;
+              };
+            }
+            if (window.navigation && window.navigation.addEventListener) {
+              origAddEventListener.call(
+                  window.navigation, 'navigate', function(e) {
+                    if (!e.cancelable || e.destination.sameDocument) return;
+                    if (e.downloadRequest !== null &&
+                        LOCAL_DOWNLOAD_URL_RE.test(e.destination.url)) {
+                      return;
+                    }
+                    origPreventDefault.call(e);
+                  }, true);
+            }
+            var iframeWinDesc = typeof HTMLIFrameElement !== 'undefined' &&
+                Object.getOwnPropertyDescriptor(
+                    HTMLIFrameElement.prototype, 'contentWindow');
+            if (iframeWinDesc && iframeWinDesc.get) {
+              Object.defineProperty(
+                  HTMLIFrameElement.prototype, 'contentWindow', {
+                    get: function() {
+                      return null;
+                    },
+                    configurable: false,
+                    enumerable: true
+                  });
+            }
+            var iframeDocDesc = typeof HTMLIFrameElement !== 'undefined' &&
+                Object.getOwnPropertyDescriptor(
+                    HTMLIFrameElement.prototype, 'contentDocument');
+            if (iframeDocDesc && iframeDocDesc.get) {
+              Object.defineProperty(
+                  HTMLIFrameElement.prototype, 'contentDocument', {
+                    get: function() {
+                      return null;
+                    },
+                    configurable: false,
+                    enumerable: true
+                  });
+            }
+            Document.prototype.createElement = function(tagName, options) {
+              if (FORBIDDEN_TAG_RE.test(String(tagName || ''))) {
+                return origCreateElement.call(this, 'div', options);
+              }
+              return origCreateElement.apply(this, arguments);
+            };
+            if (origCreateElementNS) {
+              Document.prototype.createElementNS = function(ns, qName, opts) {
+                var local = String(qName || '').split(':').pop();
+                if (FORBIDDEN_TAG_RE.test(local)) {
+                  return origCreateElement.call(this, 'div');
+                }
+                return origCreateElementNS.apply(this, arguments);
+              };
+            }
+            var origClick = HTMLElement.prototype.click;
+            HTMLElement.prototype.click = function() {
+              var link = findLinkFromNode(this, true);
+              if (link) {
+                var clickHref = (getLinkHref(link) || '').trim();
+                if (!clickHref.startsWith('#') &&
+                    !isLocalDownloadLink(link, clickHref)) {
+                  return;
+                }
+              }
+              inProgrammaticClick++;
+              try {
+                return origClick.apply(this, arguments);
+              } finally {
+                inProgrammaticClick--;
+              }
+            };
+            function isMetaRefreshAttr(el, name, value) {
+              return el && el.tagName &&
+                  el.tagName.toLowerCase() === 'meta' &&
+                  String(name || '').trim().toLowerCase() === 'http-equiv' &&
+                  isRefreshValue(value);
+            }
+            function validateIfActiveLink(el) {
+              if (!activeDeferredListeners || !isLinkElement(el) ||
+                  !hasLinkHref(el)) {
+                return;
+              }
+              var curHref = (getLinkHref(el) || '').trim();
+              if (!curHref.startsWith('#')) {
+                handleLiquidExternalLink(
+                    activeDeferredListeners.event, el, curHref,
+                    activeDeferredListeners.programmatic);
+              }
+            }
+            Element.prototype.setAttribute = function(name, value) {
+              if (isMetaRefreshAttr(this, name, value)) {
+                origElementRemove.call(this);
+                return;
+              }
+              var res = origSetAttribute.apply(this, arguments);
+              if (String(name || '').toLowerCase() === 'href') {
+                validateIfActiveLink(this);
+              }
+              return res;
+            };
+            if (origSetAttributeNS) {
+              Element.prototype.setAttributeNS = function(ns, name, value) {
+                var local = String(name || '');
+                if (local.includes(':')) local = local.split(':').pop();
+                if (isMetaRefreshAttr(this, local, value)) {
+                  origElementRemove.call(this);
+                  return;
+                }
+                var res = origSetAttributeNS.apply(this, arguments);
+                if (local.toLowerCase() === 'href') {
+                  validateIfActiveLink(this);
+                }
+                return res;
+              };
+            }
+            if (origSetAttributeNode) {
+              Element.prototype.setAttributeNode = function(attr) {
+                if (attr && isMetaRefreshAttr(this, attr.name, attr.value)) {
+                  origElementRemove.call(this);
+                  return null;
+                }
+                var res = origSetAttributeNode.apply(this, arguments);
+                if (attr && String(attr.name || '').toLowerCase() === 'href') {
+                  validateIfActiveLink(this);
+                }
+                return res;
+              };
+            }
+            if (origSetAttributeNodeNS) {
+              Element.prototype.setAttributeNodeNS = function(attr) {
+                var name = attr && (attr.localName || attr.name);
+                if (attr && isMetaRefreshAttr(this, name, attr.value)) {
+                  origElementRemove.call(this);
+                  return null;
+                }
+                var res = origSetAttributeNodeNS.apply(this, arguments);
+                if (String(name || '').toLowerCase() === 'href') {
+                  validateIfActiveLink(this);
+                }
+                return res;
+              };
+            }
+            function wrapHrefSetter(ctor) {
+              if (!ctor || !ctor.prototype) return;
+              var hrefDesc = Object.getOwnPropertyDescriptor(
+                  ctor.prototype, 'href');
+              if (hrefDesc && hrefDesc.set) {
+                Object.defineProperty(ctor.prototype, 'href', {
+                  get: hrefDesc.get,
+                  set: function(value) {
+                    hrefDesc.set.call(this, value);
+                    validateIfActiveLink(this);
+                  },
+                  configurable: true,
+                  enumerable: true
+                });
+              }
+            }
+            if (typeof HTMLAnchorElement !== 'undefined') {
+              wrapHrefSetter(HTMLAnchorElement);
+            }
+            if (typeof HTMLAreaElement !== 'undefined') {
+              wrapHrefSetter(HTMLAreaElement);
+            }
+            if (typeof HTMLMetaElement !== 'undefined') {
+              var desc = Object.getOwnPropertyDescriptor(
+                  HTMLMetaElement.prototype, 'httpEquiv');
+              if (desc && desc.set) {
+                Object.defineProperty(HTMLMetaElement.prototype, 'httpEquiv', {
+                  get: desc.get,
+                  set: function(value) {
+                    if (isRefreshValue(value)) {
+                      origElementRemove.call(this);
+                      return;
+                    }
+                    desc.set.call(this, value);
+                  },
+                  configurable: true,
+                  enumerable: true
+                });
+              }
+            }
+            Event.prototype.stopPropagation = function() {
+              if (validatingEvents && validatingEvents.has(this)) {
+                return;
+              }
+              return origStopPropagation.apply(this, arguments);
+            };
+            Event.prototype.stopImmediatePropagation = function() {
+              if (validatingEvents && validatingEvents.has(this)) {
+                return;
+              }
+              return origStopImmediatePropagation.apply(this, arguments);
+            };
+            var cancelBubbleDesc = Object.getOwnPropertyDescriptor(
+                Event.prototype, 'cancelBubble');
+            if (cancelBubbleDesc && cancelBubbleDesc.set) {
+              Object.defineProperty(Event.prototype, 'cancelBubble', {
+                get: cancelBubbleDesc.get,
+                set: function(val) {
+                  if (val && validatingEvents && validatingEvents.has(this)) {
+                    return;
+                  }
+                  cancelBubbleDesc.set.call(this, val);
+                },
+                configurable: true,
+                enumerable: true
+              });
+            }
+            function wrapAddEventListener(origFn) {
+              return function(type, listener, options) {
+                var res = origFn.apply(this, arguments);
+                if (activeDeferredListeners &&
+                    type === activeDeferredListeners.type) {
+                  origRemoveEventListener.call(
+                      window, activeDeferredListeners.type,
+                      activeDeferredListeners.fn, false);
+                  origAddEventListener.call(
+                      window, activeDeferredListeners.type,
+                      activeDeferredListeners.fn, false);
+                }
+                return res;
+              };
+            }
+            var origWinAdd = window.addEventListener || origAddEventListener;
+            EventTarget.prototype.addEventListener =
+                wrapAddEventListener(origAddEventListener);
+            if (typeof Window !== 'undefined' && Window.prototype) {
+              try {
+                Window.prototype.addEventListener =
+                    wrapAddEventListener(origWinAdd);
+              } catch (err) {}
+            }
+            try {
+              window.addEventListener = wrapAddEventListener(origWinAdd);
+            } catch (err) {}
+            function observeMutations(target) {
+              if (!target || typeof MutationObserver === 'undefined') return;
+              new MutationObserver(function(mutations) {
+                if (activeDeferredListeners) {
+                  for (var i = 0; i < mutations.length; i++) {
+                    var m = mutations[i];
+                    if (m.type === 'attributes' &&
+                        isLinkElement(m.target) &&
+                        hasLinkHref(m.target)) {
+                      var mHref = (getLinkHref(m.target) || '').trim();
+                      if (!mHref.startsWith('#')) {
+                        handleLiquidExternalLink(
+                            activeDeferredListeners.event, m.target, mHref,
+                            activeDeferredListeners.programmatic);
+                      }
+                    }
+                  }
+                }
+                purgeMetaRefresh(target);
+              }).observe(target, {
+                childList: true,
+                subtree: true,
+                attributes: true,
+                attributeFilter: ['http-equiv', 'href']
+              });
+            }
+            observeMutations(document);
+            if (Element.prototype.attachShadow) {
+              var origAttachShadow = Element.prototype.attachShadow;
+              Element.prototype.attachShadow = function() {
+                var sr = origAttachShadow.apply(this, arguments);
+                observeMutations(sr);
+                return sr;
+              };
+            }
+          }
+
+          // Returns the URL of an absolute or protocol-relative href, or null.
+          function parseAbsoluteUrl(href) {
+            var candidate =
+                PROTOCOL_RELATIVE_RE.test(href) ? 'https:' + href : href;
+            try {
+              return new URL(candidate);
+            } catch (err) {
+              return null;
+            }
+          }
+
+          // Opens the link in a new tab through the Google redirector, which
+          // warns users before they leave for another site.
+          function routeThroughRedirector(link, url) {
+            var redirectUrl = url.href;
+            if (url.origin !== 'https://www.google.com' ||
+                url.pathname !== '/url' ||
+                !url.searchParams.has('q')) {
+              redirectUrl = 'https://www.google.com/url?q=' +
+                  encodeURIComponent(url.href);
+            }
+            origSetAttribute.call(link, 'href', redirectUrl);
+            origRemoveAttributeNS.call(link, XLINK_NS, 'href');
+            origSetAttribute.call(link, 'target', '_blank');
+            origSetAttribute.call(link, 'rel', 'noopener noreferrer');
+          }
+
+          // Lets Liquid App links open web pages only through the redirector,
+          // and blocks links with other protocols, such as javascript:.
+          // Context menu events rewrite or remove the link attribute so that
+          // "Open link in new tab" also goes through the redirector or is
+          // disabled.
+          function handleLiquidExternalLink(e, link, href, programmatic) {
+            if (isLocalDownloadLink(link, href)) return;
+            if (programmatic || inProgrammaticClick > 0) {
+              removeLinkHref(link);
+              origPreventDefault.call(e);
+              origStopPropagation.call(e);
+              return;
+            }
+            var url = parseAbsoluteUrl(href);
+            var protocol = url ? url.protocol : '';
+            if (protocol === 'http:' || protocol === 'https:') {
+              routeThroughRedirector(link, url);
+            } else if (protocol !== 'mailto:' && protocol !== 'tel:') {
+              if (e.type === 'contextmenu') {
+                removeLinkHref(link);
+              } else {
+                origPreventDefault.call(e);
+                origStopPropagation.call(e);
+              }
+            }
+          }
+
+          function validateLiquidLinkAfterBubble(e, anchor, programmatic) {
+            if (validatingEvents) {
+              validatingEvents.add(e);
+            }
+            var state = {
+              type: e.type,
+              fn: onBubble,
+              event: e,
+              programmatic: programmatic
+            };
+            activeDeferredListeners = state;
+            function checkTarget(ev) {
+              var targetLink = anchor || findLinkFromEvent(ev);
+              if (!targetLink || !hasLinkHref(targetLink)) return;
+              var latestHref = (getLinkHref(targetLink) || '').trim();
+              if (!latestHref.startsWith('#')) {
+                handleLiquidExternalLink(
+                    ev, targetLink, latestHref, programmatic);
+              }
+            }
+            Promise.resolve().then(function() {
+              checkTarget(e);
+              if (activeDeferredListeners === state) {
+                activeDeferredListeners = null;
+              }
+            });
+            function onBubble(ev) {
+              origRemoveEventListener.call(window, ev.type, onBubble, false);
+              checkTarget(ev);
+            }
+            origAddEventListener.call(window, e.type, onBubble, false);
+          }
+
+          function handleLinkClick(e) {
+            var programmatic = inProgrammaticClick > 0;
+            // Find the nearest ancestor link (handles nested icons, spans,
+            // svgs, and shadow DOM).
+            var anchor = findLinkFromEvent(e);
+            if (!anchor) {
+              if (isLiquid) {
+                validateLiquidLinkAfterBubble(e, null, programmatic);
+              }
+              return;
+            }
+
+            if (isLiquid) {
+              validateLiquidLinkAfterBubble(e, anchor, programmatic);
+            }
+            var href = (getLinkHref(anchor) || '').trim();
+            if (!href.startsWith('#')) {
+              if (isLiquid) {
+                handleLiquidExternalLink(e, anchor, href, programmatic);
+              }
+              return;
+            }
+            if (e.type === 'contextmenu') return;
+
+            // Prevent default <base target="_blank"> navigation to a new blank tab.
+            origPreventDefault.call(e);
+            if (!isLiquid) {
+              origStopPropagation.call(e);
+            }
+
+            // Handle empty anchor or top anchor.
+            if (href === '#' || href === '#top') {
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+              return;
+            }
+
+            // Resolve target element by id, falling back to legacy name attribute.
+            var targetId = href.slice(1);
+            try {
+              targetId = decodeURIComponent(targetId);
+            } catch (err) {}
+
+            var targetEl = document.getElementById(targetId);
+            if (!targetEl) {
+              try {
+                var escaped = window.CSS && CSS.escape ? CSS.escape(targetId) : targetId.replace(/["\\\\]/g, '\\\\$&');
+                targetEl = document.querySelector('[name="' + escaped + '"]');
+              } catch (err) {}
+            }
+
+            // Smoothly scroll to the target within the embed and update URL hash history.
+            if (targetEl) {
+              targetEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+              if (window.history && window.history.pushState) {
+                window.history.pushState(null, '', href);
+              }
+            }
+          }
+
+          function initRender(nextIsLiquid) {
+            isLiquid = isLiquid || !!nextIsLiquid;
+            if (isLiquid) {
+              if (!guardsInstalled) {
+                guardsInstalled = true;
+                installNavigationGuards();
+              } else {
+                try {
+                  window.addEventListener =
+                      EventTarget.prototype.addEventListener;
+                } catch (err) {}
+              }
+              // document.open() removes the window's listeners, so this is
+              // added on every render.
+              origAddEventListener.call(window, 'beforeunload', function(e) {
+                origPreventDefault.call(e);
+                if (origWindowStop) {
+                  origWindowStop();
+                }
+              }, true);
+              purgeMetaRefresh(document);
+            }
+            // Listen during capturing phase to preempt <base target="_blank">.
+            origAddEventListener.call(
+                document, 'click', handleLinkClick, true);
+            if (isLiquid) {
+              origAddEventListener.call(
+                  document, 'auxclick', handleLinkClick, true);
+              origAddEventListener.call(
+                  document, 'contextmenu', handleLinkClick, true);
+            }
+          }
+
+          try {
+            Object.defineProperty(window, '__atariInitRender', {
+              value: initRender,
+              writable: false,
+              configurable: false
+            });
+          } catch (err) {
+            window.__atariInitRender = initRender;
+          }
+          initRender(${!!isLiquidArtifact});
+        })();
+      <\/script>
+    `;
+    const heightSyncPayload = enableHeightSync ? `
+      <style>
+        html, body {
+          overflow-x: auto !important;
+          overflow-y: visible !important;
+          height: auto !important;
+          min-height: 0 !important;
+          max-height: none !important;
+          margin: 0 !important;
+          padding: 0 !important;
+        }
+        body > * {
+          min-height: auto !important;
+        }
+        [style*="overflow-y: scroll"],
+        [style*="overflow-y: auto"],
+        [style*="overflow-y:scroll"],
+        [style*="overflow-y:auto"],
+        [style*="overflow: scroll"],
+        [style*="overflow: auto"],
+        [style*="overflow:scroll"],
+        [style*="overflow:auto"],
+        .overflow-y-auto,
+        .overflow-y-scroll,
+        .overflow-auto,
+        .overflow-scroll {
+          overflow-y: visible !important;
+          height: auto !important;
+          max-height: none !important;
+        }
+        [style*="100vh"],
+        [style*="min-height: 100vh"],
+        [style*="max-height: 100vh"],
+        .h-screen,
+        .min-h-screen,
+        .max-h-screen {
+          height: auto !important;
+          min-height: 0 !important;
+          max-height: none !important;
+        }
+      </style>
+      <script>
+        (function() {
+          var scrollContainers =
+              typeof WeakSet !== 'undefined' ? new WeakSet() : null;
+          var resizedClippedAncestors = [];
+
+          function setImportantStyle(el, prop, value) {
+            if (!el.style) return;
+            if (el.style.getPropertyValue(prop) !== value ||
+                el.style.getPropertyPriority(prop) !== 'important') {
+              el.style.setProperty(prop, value, 'important');
+            }
+          }
+
+          function isElementVisible(el) {
+            var currentElement = el;
+            while (currentElement && currentElement.nodeType === 1) {
+              var style = window.getComputedStyle(currentElement);
+              if (!style || style.display === 'none' ||
+                  style.visibility === 'hidden' ||
+                  style.visibility === 'collapse' ||
+                  (parseFloat(style.opacity) === 0 &&
+                   style.pointerEvents === 'none')) {
+                return false;
+              }
+              currentElement = currentElement.parentElement;
+            }
+            return true;
+          }
+
+          function normalizeInnerContainers() {
+            try {
+              var all = document.querySelectorAll('*');
+              var scrollContainerList = [];
+              for (var i = 0; i < all.length; i++) {
+                var el = all[i];
+                if (el === document.body || el === document.documentElement ||
+                    el.tagName === 'SCRIPT' || el.tagName === 'STYLE' ||
+                    el.tagName === 'LINK') {
+                  continue;
+                }
+                var computedStyle = window.getComputedStyle(el);
+                if (!computedStyle) continue;
+                var isScrollContainer =
+                    computedStyle.overflowY === 'auto' ||
+                    computedStyle.overflowY === 'scroll' ||
+                    (scrollContainers && scrollContainers.has(el));
+                if (isScrollContainer) {
+                  if (scrollContainers) scrollContainers.add(el);
+                  if (isElementVisible(el)) {
+                    scrollContainerList.push(el);
+                    setImportantStyle(el, 'overflow-y', 'visible');
+                    setImportantStyle(el, 'height', 'auto');
+                    setImportantStyle(el, 'max-height', 'none');
+                    // Release bottom and flex-grow constraints so that an inner
+                    // scroll container (such as a slide or tab panel with
+                    // position: absolute; inset: 0 or flex: 1) sizes to its own
+                    // content instead of stretching to its parent's height.
+                    if (computedStyle.position === 'absolute') {
+                      setImportantStyle(el, 'bottom', 'auto');
+                    }
+                    if ((computedStyle.flexGrow !== '0' &&
+                         computedStyle.flexGrow !== '') ||
+                        (computedStyle.flexBasis !== 'auto' &&
+                         computedStyle.flexBasis !== '')) {
+                      setImportantStyle(el, 'flex-grow', '0');
+                      setImportantStyle(el, 'flex-shrink', '0');
+                      setImportantStyle(el, 'flex-basis', 'auto');
+                    }
+                  } else {
+                    setImportantStyle(el, 'overflow-y', 'hidden');
+                    setImportantStyle(el, 'max-height', '0px');
+                  }
+                }
+                if (el !== document.body && el !== document.documentElement) {
+                  if (el.style && (el.style.height === '100vh' || el.style.height === '100%')) {
+                    setImportantStyle(el, 'height', 'auto');
+                  }
+                  if (el.style && (el.style.minHeight === '100vh' || el.style.minHeight === '100%')) {
+                    setImportantStyle(el, 'min-height', '0');
+                  }
+                }
+              }
+
+              // When visible inner scroll containers (such as active tab or
+              // slide panels) are positioned inside a clipped ancestor element
+              // (with overflow: hidden), size that ancestor to fit the visible
+              // scroll containers so each tab/slide gets its own content height
+              // without clipping or leaving empty space.
+              var clippedAncestorEntries = [];
+              for (var s = 0; s < scrollContainerList.length; s++) {
+                var scroller = scrollContainerList[s];
+                var scrollerStyle = window.getComputedStyle(scroller);
+                if (!scrollerStyle || scrollerStyle.position === 'fixed') continue;
+                var hasAbsolute = scrollerStyle.position === 'absolute';
+                var bottomSpacing = 0;
+                var clippedAncestor = null;
+                var clippedAncestorBottomSpacing = 0;
+                var aborted = false;
+                var ancestor = scroller.parentElement;
+                while (ancestor && ancestor !== document.body &&
+                       ancestor !== document.documentElement) {
+                  var ancestorStyle = window.getComputedStyle(ancestor);
+                  if (!ancestorStyle || ancestorStyle.position === 'fixed') {
+                    aborted = true;
+                    break;
+                  }
+                  bottomSpacing += (parseFloat(ancestorStyle.paddingBottom) || 0) +
+                      (parseFloat(ancestorStyle.borderBottomWidth) || 0) +
+                      (parseFloat(ancestorStyle.marginBottom) || 0);
+                  if (ancestorStyle.position === 'absolute') {
+                    hasAbsolute = true;
+                    bottomSpacing += (parseFloat(ancestorStyle.bottom) || 0);
+                  }
+                  if (ancestorStyle.overflowY === 'hidden' ||
+                      ancestorStyle.overflowY === 'clip') {
+                    clippedAncestor = ancestor;
+                    clippedAncestorBottomSpacing =
+                        bottomSpacing - (parseFloat(ancestorStyle.marginBottom) || 0);
+                  }
+                  ancestor = ancestor.parentElement;
+                }
+                if (aborted || !hasAbsolute || !clippedAncestor) continue;
+                var ancestorRect = clippedAncestor.getBoundingClientRect();
+                var scrollerRect = scroller.getBoundingClientRect();
+                var neededHeight = Math.ceil(
+                    Math.max(0, scrollerRect.top - ancestorRect.top) +
+                    scrollerRect.height +
+                    Math.max(0, clippedAncestorBottomSpacing));
+                var foundEntry = null;
+                for (var j = 0; j < clippedAncestorEntries.length; j++) {
+                  if (clippedAncestorEntries[j].element === clippedAncestor) {
+                    foundEntry = clippedAncestorEntries[j];
+                    break;
+                  }
+                }
+                if (foundEntry) {
+                  if (neededHeight > foundEntry.height) {
+                    foundEntry.height = neededHeight;
+                  }
+                } else {
+                  clippedAncestorEntries.push({
+                    element: clippedAncestor,
+                    height: neededHeight,
+                  });
+                }
+              }
+
+              var nextResizedAncestors = [];
+              for (var n = 0; n < clippedAncestorEntries.length; n++) {
+                var entry = clippedAncestorEntries[n];
+                if (entry.height > 0) {
+                  setImportantStyle(entry.element, 'height', entry.height + 'px');
+                  setImportantStyle(entry.element, 'min-height', '0');
+                  nextResizedAncestors.push(entry.element);
+                }
+              }
+              for (var p = 0; p < resizedClippedAncestors.length; p++) {
+                var previousAncestor = resizedClippedAncestors[p];
+                if (nextResizedAncestors.indexOf(previousAncestor) === -1 &&
+                    previousAncestor.style) {
+                  previousAncestor.style.removeProperty('height');
+                  previousAncestor.style.removeProperty('min-height');
+                }
+              }
+              resizedClippedAncestors = nextResizedAncestors;
+            } catch (e) {}
+          }
+
+          function syncBackground() {
+            try {
+              if (document.body) {
+                var bodyBg = window.getComputedStyle(document.body).backgroundColor;
+                if (bodyBg && bodyBg !== 'rgba(0, 0, 0, 0)' && bodyBg !== 'transparent') {
+                  document.documentElement.style.backgroundColor = bodyBg;
+                } else {
+                  for (var i = 0; i < document.body.children.length; i++) {
+                    var child = document.body.children[i];
+                    if (child.tagName !== 'SCRIPT' && child.tagName !== 'STYLE' && child.tagName !== 'LINK') {
+                      var childBg = window.getComputedStyle(child).backgroundColor;
+                      if (childBg && childBg !== 'rgba(0, 0, 0, 0)' && childBg !== 'transparent') {
+                        document.body.style.backgroundColor = childBg;
+                        document.documentElement.style.backgroundColor = childBg;
+                        break;
+                      }
+                    }
+                  }
+                }
+              }
+            } catch (e) {}
+          }
+
+          // An element sized in viewport units is as tall as the iframe, and
+          // the iframe is as tall as its content, so the iframe could never
+          // get smaller, or would keep growing. This removes such heights from
+          // the app's own CSS, whichever framework or style sheet they come
+          // from. Fixed elements don't make the page taller, so they keep
+          // their heights.
+          var VIEWPORT_HEIGHT_PATTERN = /[0-9.][sld]?(?:v[hb]|vmax)(?![a-z])/i;
+          var HEIGHT_PROPERTIES = ['height', 'min-height', 'max-height',
+              'block-size', 'min-block-size', 'max-block-size'];
+          // The number of rules that each style sheet had when it was scanned.
+          var scannedRuleCounts =
+              typeof WeakMap !== 'undefined' ? new WeakMap() : null;
+
+          function removeViewportHeights(style) {
+            if (style.getPropertyValue('position') === 'fixed') return;
+            for (var i = 0; i < HEIGHT_PROPERTIES.length; i++) {
+              var value = style.getPropertyValue(HEIGHT_PROPERTIES[i]);
+              if (value && VIEWPORT_HEIGHT_PATTERN.test(value)) {
+                style.removeProperty(HEIGHT_PROPERTIES[i]);
+              }
+            }
+          }
+
+          function removeViewportHeightsFromRules(rules) {
+            for (var i = 0; i < rules.length; i++) {
+              var rule = rules[i];
+              if (rule.style) removeViewportHeights(rule.style);
+              // A style sheet included with @import.
+              if (rule.styleSheet) removeViewportHeightsFromSheet(rule.styleSheet);
+              // Rules nested in @media, @supports, @layer and so on.
+              if (rule.cssRules) removeViewportHeightsFromRules(rule.cssRules);
+            }
+          }
+
+          function removeViewportHeightsFromSheet(sheet) {
+            var rules = null;
+            try {
+              rules = sheet.cssRules;
+            } catch (e) {
+              // The rules of a style sheet loaded from another origin without
+              // CORS can't be read.
+            }
+            if (!rules) return;
+            if (scannedRuleCounts) {
+              if (scannedRuleCounts.get(sheet) === rules.length) return;
+              scannedRuleCounts.set(sheet, rules.length);
+            }
+            removeViewportHeightsFromRules(rules);
+          }
+
+          function removeAllViewportHeights() {
+            try {
+              var sheets = document.styleSheets;
+              for (var i = 0; i < sheets.length; i++) {
+                removeViewportHeightsFromSheet(sheets[i]);
+              }
+              var adoptedSheets = document.adoptedStyleSheets || [];
+              for (var j = 0; j < adoptedSheets.length; j++) {
+                removeViewportHeightsFromSheet(adoptedSheets[j]);
+              }
+              var styledElements = document.querySelectorAll('[style]');
+              for (var k = 0; k < styledElements.length; k++) {
+                if (styledElements[k].style) {
+                  removeViewportHeights(styledElements[k].style);
+                }
+              }
+            } catch (e) {}
+          }
+
+          // Returns the height of the content. Unlike the html/body scroll
+          // heights, this does not depend on the iframe's own viewport height,
+          // so it can get smaller when the content shrinks.
+          function measureContentHeight(body, docEl) {
+            // Height-synced apps render in standards mode, where html is
+            // exactly as tall as the body's content, including margins that
+            // collapse through the bottom of the body's children.
+            var height = docEl.getBoundingClientRect().height;
+            var scrollTop = window.pageYOffset || docEl.scrollTop || body.scrollTop || 0;
+            var maxChildBottom = 0;
+            for (var i = 0; i < body.children.length; i++) {
+              var child = body.children[i];
+              if (child.nodeType !== 1 || child.tagName === 'SCRIPT' || child.tagName === 'STYLE' || child.tagName === 'LINK') {
+                continue;
+              }
+              var style = window.getComputedStyle ? window.getComputedStyle(child) : null;
+              if (style && (style.position === 'fixed' || style.display === 'none' ||
+                  style.visibility === 'hidden' || style.visibility === 'collapse')) {
+                continue;
+              }
+              var rect = child.getBoundingClientRect();
+              var childHeight = rect.height;
+              // Content that overflows an absolutely positioned child makes
+              // the page taller, unless the child clips or scrolls it.
+              // scrollHeight includes it either way. The body clips content
+              // that overflows its other children (overflow-x: auto makes the
+              // body a scroll container), so html's height already covers
+              // everything that those children show.
+              if (style && style.position === 'absolute' && style.overflowY === 'visible') {
+                childHeight = Math.max(rect.height, child.scrollHeight || 0);
+              }
+              var marginBottom = style ? (parseFloat(style.marginBottom) || 0) : 0;
+              var bottom = scrollTop + rect.top + childHeight + marginBottom;
+              if (bottom > maxChildBottom) maxChildBottom = bottom;
+            }
+            if (maxChildBottom > 0) {
+              // Include the body's own bottom edges. Overestimating by a
+              // collapsed margin is harmless.
+              var bodyStyle = window.getComputedStyle ? window.getComputedStyle(body) : null;
+              if (bodyStyle) {
+                maxChildBottom += (parseFloat(bodyStyle.paddingBottom) || 0) +
+                    (parseFloat(bodyStyle.borderBottomWidth) || 0) +
+                    (parseFloat(bodyStyle.marginBottom) || 0);
+              }
+            }
+            return Math.ceil(Math.max(height, maxChildBottom));
+          }
+
+          function reportHeight() {
+            var body = document.body;
+            var docEl = document.documentElement;
+            if (!body || !docEl) return;
+            removeAllViewportHeights();
+            normalizeInnerContainers();
+            syncBackground();
+            var contentHeight = measureContentHeight(body, docEl);
+            var scroller = document.scrollingElement || docEl;
+            var scrollHeight = Math.ceil(scroller.scrollHeight || 0);
+            for (var r = 0; r < resizedClippedAncestors.length; r++) {
+              setImportantStyle(
+                  resizedClippedAncestors[r], 'min-height', '100vh');
+            }
+            if (mutationObserver) mutationObserver.takeRecords();
+            var viewportHeight = Math.ceil(window.innerHeight || docEl.clientHeight || 0);
+            var height;
+            if (scrollHeight > viewportHeight + 1) {
+              // The content overflows the iframe, so the embed needs to grow.
+              height = Math.max(scrollHeight, contentHeight);
+              if (viewportHeight === shrunkToHeight) {
+                // The embed just shrank to a height that the content doesn't
+                // fit in, so part of the content wasn't measured.
+                overflowedHeight = viewportHeight;
+              }
+            } else {
+              if (viewportHeight === shrunkToHeight ||
+                  (shrunkToHeight > 0 && viewportHeight < shrunkFromHeight)) {
+                // The content fits at the height the embed shrank to (or at the
+                // minimum height the parent page clamped it to).
+                shrunkToHeight = 0;
+                shrunkFromHeight = 0;
+              }
+              // The html/body scroll heights never drop below the iframe's
+              // viewport (which is the last reported height), so only the
+              // content height can make the embed smaller.
+              height = contentHeight || scrollHeight;
+              // Shrinking to a height that the content overflowed would make
+              // the embed grow and shrink forever.
+              if (height === overflowedHeight) return;
+            }
+            if (height > 0 && height !== lastReportedHeight) {
+              if (height < viewportHeight) {
+                shrunkToHeight = height;
+                shrunkFromHeight = viewportHeight;
+              } else {
+                shrunkToHeight = 0;
+                shrunkFromHeight = 0;
+              }
+              lastReportedHeight = height;
+              window.parent.postMessage({
+                type: '${MessageAction.RESIZE}',
+                height: height
+              }, '*');
+            }
+          }
+
+          // Coalesce reports to at most once per frame. reportHeight itself
+          // writes inline styles, which would otherwise re-trigger the
+          // MutationObserver synchronously.
+          var lastReportedHeight = 0;
+          // The last height reported to shrink the embed, and the last height
+          // that the content didn't fit in after the embed shrank to it.
+          var shrunkToHeight = 0;
+          var shrunkFromHeight = 0;
+          var overflowedHeight = 0;
+          var reportScheduled = false;
+          function resetOverflowTracking() {
+            shrunkToHeight = 0;
+            shrunkFromHeight = 0;
+            overflowedHeight = 0;
+          }
+          window.addEventListener('pointerdown', resetOverflowTracking, true);
+          window.addEventListener('mousedown', resetOverflowTracking, true);
+          window.addEventListener('click', resetOverflowTracking, true);
+          window.addEventListener('keydown', resetOverflowTracking, true);
+          window.addEventListener('scroll', resetOverflowTracking, true);
+          function scheduleReportHeight() {
+            if (reportScheduled) return;
+            reportScheduled = true;
+            window.requestAnimationFrame(function() {
+              reportScheduled = false;
+              reportHeight();
+            });
+          }
+
+          function observeBodyChildren(resizeObserver) {
+            resizeObserver.observe(document.body);
+            for (var i = 0; i < document.body.children.length; i++) {
+              var child = document.body.children[i];
+              if (child.tagName !== 'SCRIPT' && child.tagName !== 'STYLE') {
+                resizeObserver.observe(child);
+              }
+            }
+          }
+
+          if (typeof ResizeObserver !== 'undefined') {
+            var resizeObserver = new ResizeObserver(scheduleReportHeight);
+            if (document.documentElement) {
+              resizeObserver.observe(document.documentElement);
+            }
+            if (document.body) {
+              observeBodyChildren(resizeObserver);
+            } else {
+              document.addEventListener('DOMContentLoaded', function() {
+                if (document.body) {
+                  observeBodyChildren(resizeObserver);
+                }
+                scheduleReportHeight();
+              });
+            }
+          }
+
+          if (typeof MutationObserver !== 'undefined') {
+            var mutationObserver = new MutationObserver(scheduleReportHeight);
+            mutationObserver.observe(document.documentElement || document, {
+              childList: true,
+              subtree: true,
+              attributes: true,
+              characterData: true
+            });
+          }
+
+          if (document.fonts && document.fonts.ready) {
+            document.fonts.ready.then(scheduleReportHeight);
+          }
+
+          window.addEventListener('load', scheduleReportHeight);
+          window.addEventListener('resize', scheduleReportHeight);
+          window.addEventListener('transitionend', scheduleReportHeight);
+          window.addEventListener('animationend', scheduleReportHeight);
+          if (document.readyState === 'complete' || document.readyState === 'interactive') {
+            scheduleReportHeight();
+          } else {
+            document.addEventListener('DOMContentLoaded', scheduleReportHeight);
+          }
+        })();
+      <\/script>
+    ` : '';
+    // Tells the page around the embed which color fills the user page, so the
+    // page can paint the same color behind the iframe. When the page scrolls a
+    // tall cross-origin iframe, the browser may not have painted the newly
+    // visible part of the iframe yet, and that color shows instead of the
+    // page's own background. Only reads styles and never changes the user page.
+    const backgroundColorPayload = `
+      <script>
+        (function() {
+          // The root element's background fills the whole page. As in CSS,
+          // the body's background is used when the root element has none.
+          function getPageBackgroundColor() {
+            var docStyle = window.getComputedStyle(document.documentElement);
+            var color = docStyle.backgroundColor;
+            if ((color === 'rgba(0, 0, 0, 0)' || color === 'transparent') &&
+                docStyle.backgroundImage === 'none' && document.body) {
+              color = window.getComputedStyle(document.body).backgroundColor;
+            }
+            return color || '';
+          }
+
+          var lastReportedColor = '';
+          function reportBackgroundColor() {
+            try {
+              var color = getPageBackgroundColor();
+              if (color === lastReportedColor) return;
+              lastReportedColor = color;
+              window.parent.postMessage({
+                type: '${MessageAction.BACKGROUND_COLOR}',
+                backgroundColor: color
+              }, '*');
+            } catch (e) {}
+          }
+
+          // The page background usually changes through an attribute on html
+          // or body (for example a theme class), a style sheet in head, or the
+          // system color scheme.
+          if (typeof MutationObserver !== 'undefined') {
+            var observer = new MutationObserver(reportBackgroundColor);
+            observer.observe(document.documentElement, {attributes: true});
+            if (document.body) {
+              observer.observe(document.body, {attributes: true});
+            }
+            if (document.head) {
+              observer.observe(document.head, {
+                attributes: true,
+                childList: true,
+                subtree: true,
+                characterData: true
+              });
+            }
+          }
+          var colorSchemeQuery =
+              window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)');
+          if (colorSchemeQuery && colorSchemeQuery.addEventListener) {
+            colorSchemeQuery.addEventListener('change', reportBackgroundColor);
+          }
+          window.addEventListener('load', reportBackgroundColor);
+          window.addEventListener('transitionend', reportBackgroundColor);
+          window.addEventListener('animationend', reportBackgroundColor);
+          reportBackgroundColor();
+        })();
+      <\/script>
+    `;
+    const embeddedPixPayload = enableEmbeddedPix ? `
+      <script>
+        (function() {
+          function onImageEdit(currentImg) {
+            var src = currentImg.__atariOriginalSrc ||
+                      currentImg.getAttribute('src') ||
+                      currentImg.src;
+            var placeholderKey = currentImg.getAttribute('data-ph') ||
+                                 currentImg.getAttribute('data-placeholder') ||
+                                 src;
+            window.parent.postMessage({
+              type: '${MessageAction.IMAGE_CLICK}',
+              src: src,
+              placeholderKey: placeholderKey
+            }, '*');
+          }
+
+          var waitForToolbar = function() {
+            if (window.ProseMirror && window.ProseMirror.initImageToolbar) {
+              if (window.__atariImageToolbar) {
+                window.__atariImageToolbar.destroy();
+              }
+              var labels = ${JSON.stringify(textEditLabels).replace(/</g, '\\u003c')};
+              window.__atariImageToolbar = window.ProseMirror.initImageToolbar({
+                onEditClick: onImageEdit,
+                label: labels ? labels.editImage : undefined,
+                tooltip: labels ? labels.editImageTooltip : undefined
+              });
+            } else {
+              setTimeout(waitForToolbar, 10);
+            }
+          };
+
+          if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', waitForToolbar);
+          } else {
+            waitForToolbar();
+          }
+        })();
+      <\/script>
+    ` : '';
+    // Anything written before the app's HTML makes the browser ignore the
+    // app's own doctype and render the app in quirks mode. In quirks mode, html
+    // and body stretch to the frame's height, and so does content sized to
+    // them, so a height-synced frame could never get smaller. Height-synced
+    // frames therefore always render in standards mode. Other embeds keep
+    // rendering in quirks mode, which many existing embeds rely on, for
+    // example to fill their box with height: 100%.
+    const doctype = enableHeightSync ? '<!DOCTYPE html>' : '';
+    const liquidAppCsp = isLiquidArtifact ? LIQUID_APP_CSP_META : '';
+    const content = doctype + liquidAppCsp +
+        '<base href="' + window.location.href + '" target="_blank">' +
+        hashLinkInterceptor + scrollRevealShim + bootstrapStyle +
+        prosemirrorBundle + appHtml + textEditorPayload + heightSyncPayload +
+        backgroundColorPayload + embeddedPixPayload;
+    frame.contentWindow.document.write(policy ? policy.createHTML(content) : content);
+    frame.contentWindow.document.close();
+  }
+
+  function isBase64Image(img) {
+    var src = (img.getAttribute('src') || img.src || '').trim().toLowerCase();
+    return src.startsWith('data:');
+  }
+
+  /**
+   * Gives each element in `doc`'s body a data-atari-segment-id, excluding
+   * base64 images which cannot be segmented or edited.
+   */
+  function markSelectableElements(doc) {
+    let nextId = 0;
+    for (const el of doc.body.querySelectorAll('*')) {
+      if (el.tagName === 'IMG' && isBase64Image(el)) {
+        continue;
+      }
+      if (!el.parentElement.closest('svg')) {
+        el.setAttribute('data-atari-segment-id', nextId);
+        nextId++;
+      }
+    }
+  }
+
+  function onGapiInitialized() {
+    // Inform the parent frame that GAPI has been initialized.
+    gapi.rpc.call('..', 'innerFrameGapiInitialized');
+    gapi.rpc.register('updateUserHtmlFrame', updateUserHtmlFrame);
+  }
+
+  function loadGapiClient() {
+    gapi.load('gapi.rpc', onGapiInitialized);
+  }
+
+  if (document.readyState == 'complete') {
+    loadGapi();
+  } else {
+    self.addEventListener('load', loadGapi);
+  }
+
+  function clearCookies() {
+    var cookies = document.cookie.split(";");
+    for (var i = 0; i < cookies.length; i++) {
+        var cookie = cookies[i];
+        var equalPosition = cookie.indexOf("=");
+        var name = equalPosition > -1 ? cookie.substr(0, equalPosition) : cookie;
+        document.cookie = name + "=;expires=Thu, 01 Jan 1970 00:00:00 GMT";
+        // Try deleting any cookies set on the googleusercontent domain.
+        document.cookie =
+          name + "=;expires=Thu, 01 Jan 1970 00:00:01 GMT ;domain=.googleusercontent.com";
+    }
+  }
+
+  function clearStorage() {
+    try {
+      localStorage.clear();
+      sessionStorage.clear();
+    } catch (e) {}
+  }
+  window.addEventListener('message', function(e) {
+    var type = e.data && e.data.type;
+    if (e.source === window.parent) {
+      var innerIframe = document.getElementById('userHtmlFrame');
+      if (innerIframe && innerIframe.contentDocument) {
+        if (type === MessageAction.OPTIMISTIC_IMAGE_PREVIEW) {
+          var placeholderKey = e.data.placeholderKey || e.data.placeholder;
+          if (placeholderKey) {
+            var selector = 'img[data-ph="' + CSS.escape(placeholderKey) + '"], ' +
+                           'img[data-placeholder="' + CSS.escape(placeholderKey) + '"], ' +
+                           'img[src="' + CSS.escape(placeholderKey) + '"]';
+            var existing = activePreviews.get(placeholderKey);
+            var matched = Array.from(innerIframe.contentDocument.querySelectorAll(selector));
+            var targetImgs = matched.length > 0 ? matched : (existing ? existing.elements : []);
+            if (targetImgs.length > 0) {
+              var originalSrc = existing ? existing.originalSrc :
+                  (targetImgs[0].getAttribute('src') || targetImgs[0].src);
+              var blobUrl = null;
+              var previewSrc = null;
+              if (e.data.buffer) {
+                var blob = new Blob([e.data.buffer], {type: e.data.mimeType || 'image/png'});
+                blobUrl = URL.createObjectURL(blob);
+                previewSrc = blobUrl;
+              } else if (e.data.dataUrl) {
+                previewSrc = e.data.dataUrl;
+              } else if (e.data.src) {
+                previewSrc = e.data.src;
+              }
+              if (previewSrc) {
+                if (existing && existing.blobUrl) {
+                  URL.revokeObjectURL(existing.blobUrl);
+                }
+                activePreviews.set(placeholderKey, {
+                  elements: targetImgs,
+                  originalSrc: originalSrc,
+                  blobUrl: blobUrl
+                });
+                for (var i = 0; i < targetImgs.length; i++) {
+                  targetImgs[i].__atariOriginalSrc = originalSrc;
+                  targetImgs[i].src = previewSrc;
+                }
+              }
+            }
+          }
+        } else if (type === MessageAction.IMAGE_ROLLBACK) {
+          var placeholderKey = e.data.placeholderKey || e.data.placeholder;
+          if (placeholderKey) {
+            var existing = activePreviews.get(placeholderKey);
+            var originalSrc = e.data.originalSrc || e.data.src || (existing && existing.originalSrc);
+            if (existing && existing.blobUrl) {
+              URL.revokeObjectURL(existing.blobUrl);
+            }
+            activePreviews.delete(placeholderKey);
+            var selector = 'img[data-ph="' + CSS.escape(placeholderKey) + '"], ' +
+                           'img[data-placeholder="' + CSS.escape(placeholderKey) + '"], ' +
+                           'img[src="' + CSS.escape(placeholderKey) + '"]';
+            var matched = Array.from(innerIframe.contentDocument.querySelectorAll(selector));
+            var targetImgs = (existing && existing.elements.length > 0) ? existing.elements : matched;
+            if (originalSrc && targetImgs.length > 0) {
+              for (var i = 0; i < targetImgs.length; i++) {
+                delete targetImgs[i].__atariOriginalSrc;
+                targetImgs[i].src = originalSrc;
+              }
+            }
+          }
+        }
+      }
+      return;
+    }
+    if (type === MessageAction.GENAI_TEXT_EDIT || type === MessageAction.GENAI_TEXT_FORMAT ||
+        type === MessageAction.RESIZE || type === MessageAction.BACKGROUND_COLOR ||
+        type === MessageAction.UNDO || type === MessageAction.REDO ||
+        type === MessageAction.IMAGE_CLICK ||
+        type === MessageAction.OBJECT_SEGMENTATION_EDITS) {
+      var innerIframe = document.getElementById('userHtmlFrame');
+      if (innerIframe && e.source !== innerIframe.contentWindow) return;
+      window.parent.postMessage(e.data, '*');
+    }
+  });
+</script>
+
+
+</body></html>
